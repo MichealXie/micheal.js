@@ -62,3 +62,17 @@ function myAjax(obj) {
     onsuccess(data)
   }
 }
+
+function myJsonp(url, fnName){
+  var script = document.createElement('script');
+  script.setAttribute('src', url + "?callback=" + fnName);
+  script.classList.add("temp")
+  $('body').appendChild(script)
+  $("body").removeChild($("script.temp"))
+}
+
+myJsonp("http://api.douban.com/v2/movie/in_theaters", "test")
+
+function test(data){
+  console.log(data)
+}
