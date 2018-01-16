@@ -32,9 +32,21 @@ var obj = {
 myAjax(obj)
 ```
 
-### 5.jsonp"
+### 5. jsonp"
 使用方法:
 ```
 jsonp(url + functionString)
 //如: jsonp("xxx.com", "test")
 ```
+
+### 6. 一个lisp 转 c 的编译器
+源码是  *compiler.js*   
+转换效果如下: 
+
+                   LISP                      C
+ 
+    2 + 2          (add 2 2)                 add(2, 2)
+    4 - 2          (subtract 4 2)            subtract(4, 2)
+    2 + (4 - 2)    (add 2 (subtract 4 2))    add(2, subtract(4, 2))
+
+
