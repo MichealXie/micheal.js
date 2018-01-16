@@ -12,7 +12,7 @@ function inherit(sup, sub) {
 }
 
 function repeatNum(array, aim) {
-  var num = 1
+  var num = 0
   for (var i = 0; i < array.length; i++) {
     if (array[i] === aim) num++
   }
