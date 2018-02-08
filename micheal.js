@@ -7,6 +7,8 @@ function $$(selec) {
 }
 //只能对构建函数使用, 且要先继承, 再创建的实例才有继承的方法/属性
 function inherit(sup, sub) {
+  // ES6 可以一行代码嘿嘿, 因为修复了 constructor 的指向
+  // Object.setPrototypeOf(Child.prototype, Parent.prototype)
   sub.prototype = Object.create(sup.prototype)
   sub.prototype.constructor = sub
 }
@@ -17,6 +19,11 @@ function repeatNum(array, aim) {
     if (array[i] === aim) num++
   }
   return num
+}
+
+function arrayRemove(array, aim){
+  let index = array.indexOf(aim)
+  if(index >= 0) array.splice(index, 1)
 }
 
 var obj = {
@@ -76,3 +83,24 @@ myJsonp("http://api.douban.com/v2/movie/in_theaters", "test")
 function test(data){
   console.log(data)
 }
+
+
+// 柯里函数
+function curry(fn, thisArg) {
+  if (!Array.isArray(thisArg)) {
+    thisArg = []
+  }
+  return function (things) {
+    let args = Array.from(arguments)
+    if (fn.length > (args.length + thisArg.length)) {
+      return curry(fn, thisArg.concat(args))
+    }
+    return fn.apply(this, thisArg.concat(args))
+  }
+}
+
+function add(a, b, c) {
+  return a + b + c
+}
+let foo = curry(add)
+console.log(foo(2)(3)(4))
