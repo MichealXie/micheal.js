@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>倒计时</title>
+</head>
+<body>
+	<div id="time"></div></body>
+<script>
+	var view = {
+		el: 'time',
+		template: '距离明天还有{{hours}}小时, {{minutes}}分钟, {{seconds}}秒',
+		data: {
+			hours: "",
+			minutes: "",
+			seconds: "",
+		},
+		render(){
+			var ret = this.template
+			let regExp = /{{\w+}}/g
+			for (let item in this.data) {
+				ret = ret.replace(`{{${item}}}`, this.data[item])
+			}
+			this.$el.innerText = ret
+		},
+		init(){
+			this.$el = document.getElementById(this.el)
+			var tomorrow = new Date()
+			tomorrow.setDate(new Date().getDate() + 1 )
+			tomorrow.setHours(0)
+			tomorrow.setMinutes(0)
+			tomorrow.setSeconds(0)
+			var gap = tomorrow - new Date()
+			// 默认 1970 年早上 8点开始
+			this.data.hours = new Date(gap).getHours() - 8
+			this.data.minutes = new Date(gap).getMinutes()
+			this.data.seconds = new Date(gap).getSeconds()
+			this.render.call(this)
+		}
+	}
+	setInterval(view.init.bind(view), 1000)
+</script>
+</html>
