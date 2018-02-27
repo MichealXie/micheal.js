@@ -3,16 +3,17 @@ function Promise(fn){
 	var resolvedFns = []
 	var rejectedFns = []
 	function resolve(ret){
-		state = 'resolved'
+		// 万一 promise 内部为同步函数, 那么 then 里的方法还未注入, 强制 setTimeout 使之变为异步函数
 		setTimeout( () => {
+			state = 'resolved'
 			resolvedFns.map( (fn) => {
 				fn(ret)
 			})
 		}, 0)
 	}
 	function reject(ret) {
-		this.state = 'rejected'
 		setTimeout(() => {
+			state = 'rejected'
 			rejectedFns.map((fn) => {
 				fn(ret)
 			})
@@ -31,7 +32,8 @@ new Promise((resolve, reject) => {
 		if (Math.random() > 0.5) resolve('成功')
 		else reject('错误')
 	},1000)
-}).then( (ret) => {
+})
+.then( (ret) => {
 	console.log(ret + 1)
 }, (ret) => {
 	console.log(ret + 1)
