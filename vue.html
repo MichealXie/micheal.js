@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>事件与代码优化</title>
+</head>
+
+<body>
+
+	<div id="app">
+		<input v-model="name" v-on:click="sayHi" type="text">
+		<h1>{{name}} 's age is {{age}}</h1>
+	</div>
+
+	<script>
+	function defineReactive(data) {
+		if (Object.prototype.toString.call(data) !== '[object Object]') return
+		for (let key in data) {
+			let val = data[key]
+			// 每一个属性都是一个发布者
+			let subject = new Subject()
+			Object.defineProperty(data, key, {
+				enumerable: true,
+				configurable: true,
+				// get 负责添加订阅者, 谁是订阅者?  每次currentObserver
+				get() {
+					console.log('获取值' + key)
+					if (currentObserver) currentObserver.subTo(subject)
+					return val
+				},
+				set(newVal) {
+					console.log('设置新值')
+					val = newVal
+					subject.notify()
+				}
+			})
+		}
+	}
+
+	class Subject {
+		constructor() {
+			// 区分每一个 subject
+			this.id = subId
+			subId++
+			this.subPool = []
+		}
+		add(sub) {
+			this.subPool.push(sub)
+		}
+		remove(sub) {
+			let index = this.subPool.indexOf(sub)
+			if (index >= 0) {
+				this.subPool.splice(index, 1)
+			}
+		}
+		notify() {
+			console.log(this.id)
+			console.log(this.subPool)
+			this.subPool.map((sub) => {
+				// 需要保证每个 sub 都有一个 update 方法
+				sub.update()
+			})
+		}
+	}
+
+
+	// 每一个匹配到的 {{ }} 属性都是观察者, cb 的作用是
+	class Observer {
+		constructor(vm, key, cb) {
+			//	subjects 主要用来记录, 防止多次订阅
+			this.subjects = {}
+			this.vm = vm
+			this.key = key
+			this.cb = cb
+			this.value = this.getValue()
+		}
+		update() {
+			// 去取值
+			let newVal = this.getValue()
+			let oldVal = this.value
+			if (newVal !== oldVal) {
+				this.value = newVal
+				this.cb.call(this.vm, newVal, oldVal)
+			}
+		}
+		subTo(subject) {
+			// 如果还未被订阅
+			if (!this.subjects[subject.id]) {
+				subject.add(this)
+				// 记录补全...
+				this.subjects[subject.id] = subject
+			}
+		}
+		getValue() {
+			currentObserver = this
+			// 触发 get, currentObserver 派上用场
+			let value = this.vm.$data[this.key]
+			currentObserver = null
+			// 触发 get, 增加订阅
+			return value
+		}
+	}
+	// 两个全部变量
+	// 用来监管是否重复订阅
+	let subId = 0
+	// 用来设置订阅
+	let currentObserver
+
+	// 编译模板
+	class Compiler {
+		constructor(vm) {
+			this.vm = vm
+			this.node = vm.$el
+			this.compile()
+		}
+		compile() {
+			this.traverseAndRender(this.node)
+		}
+		traverseAndRender(node) {
+			for (let child of node.childNodes) {
+				if (child.nodeType === 1) {
+					this.traverseAndRender(child)
+				}
+				else if (child.nodeType === 3) {
+					this.render(child)
+				}
+			}
+		}
+		render(node) {
+			let reg = /{{(.+?)}}/g
+			let match
+			while (match = reg.exec(node.nodeValue)) {
+				let raw = match[0]
+				let key = match[1].trim()
+				node.nodeValue = node.nodeValue.replace(raw, this.vm[key])
+				// 每一个 {{ }} 都是观察者
+				new Observer(this.vm, key, function (val, oldVal) {
+					node.nodeValue = node.nodeValue.replace(oldVal, val)
+				})
+			}
+		}
+	}
+
+	class Vue {
+		constructor(options) {
+			this.init(options)
+			defineReactive(this.$data)
+			new Compiler(this)
+		}
+		init(options) {
+			this.$el = document.querySelector(options.el)
+			this.$data = options.data
+			this.methods = options.methods
+			this.makeShortcut()
+		}
+		makeShortcut() {
+			for (let key in this.$data) {
+				Object.defineProperty(this, key, {
+					enumerable: true,
+					configurable: true,
+					get: () => {
+						return this.$data[key]
+					},
+					set: (newVal) => {
+						this.$data[key] = newVal
+					}
+				})
+			}
+		}
+	}
+
+	let vm = new Vue({
+		el: '#app',
+		data: {
+			name: 'micheal',
+			age: 22
+		}
+	})
+
+	let clock = setInterval(function () {
+		vm.age++   //等同于 vm.$data.age， 见 mvvm init 方法内的数据劫持
+
+		if (vm.age === 30) clearInterval(clock)
+	}, 1000)
+	</script>
+</body>
+
+</html>
