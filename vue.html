@@ -3,16 +3,40 @@
 
 <head>
 	<meta charset="UTF-8">
-	<title>事件与代码优化</title>
+	<title>我的 vue</title>
 </head>
 
 <body>
 
 	<div id="app">
-		<input v-model="name" v-on:click="sayHi" type="text">
+		<input v-model="name" type="text">
 		<h1>{{name}} 's age is {{age}}</h1>
+		<button v-on:click="sayHi"> 打招呼 </button>
 	</div>
-
+	<style>
+		#app{
+			display:flex;
+			align-items: center;
+			justify-content: center;
+			flex-direction: column;
+			background-color: #eef2ee;
+			font-size: 20px;
+			height: 100vh;
+		}
+		input, button{
+			display:flex;
+			align-items: center;
+			justify-content: center;
+			padding: 24px;
+			font-size: 20px;
+			border: none;
+			outline: none;
+			transition: .5s;
+		}
+		input:hover, button:hover{
+			background-color: #aaa;
+		}
+	</style>
 	<script>
 	function defineReactive(data) {
 		if (Object.prototype.toString.call(data) !== '[object Object]') return
@@ -25,12 +49,12 @@
 				configurable: true,
 				// get 负责添加订阅者, 谁是订阅者?  每次currentObserver
 				get() {
-					console.log('获取值' + key)
+					// console.log('获取值' + key)
 					if (currentObserver) currentObserver.subTo(subject)
 					return val
 				},
 				set(newVal) {
-					console.log('设置新值')
+					// console.log('设置新值')
 					val = newVal
 					subject.notify()
 				}
@@ -55,8 +79,8 @@
 			}
 		}
 		notify() {
-			console.log(this.id)
-			console.log(this.subPool)
+			// console.log(this.id)
+			// console.log(this.subPool)
 			this.subPool.map((sub) => {
 				// 需要保证每个 sub 都有一个 update 方法
 				sub.update()
@@ -110,6 +134,7 @@
 	// 编译模板
 	class Compiler {
 		constructor(vm) {
+			// vm 能联系一切...
 			this.vm = vm
 			this.node = vm.$el
 			this.compile()
@@ -120,14 +145,48 @@
 		traverseAndRender(node) {
 			for (let child of node.childNodes) {
 				if (child.nodeType === 1) {
+					this.compileNode(child)
 					this.traverseAndRender(child)
 				}
 				else if (child.nodeType === 3) {
-					this.render(child)
+					this.compileText(child)
 				}
 			}
 		}
-		render(node) {
+		compileNode(node) {
+			let attrs = [...node.attributes]
+			attrs.map((attr) => {
+				if (this.isModelDirective(attr.name)) this.bindModel(node, attr)
+				else if (this.isEventDirective(attr.name)) this.bindEvent(node, attr)
+			})
+		}
+		isModelDirective(name) {
+			return name === 'v-model'
+		}
+		bindModel(node, attr) {
+			let key = attr.value
+			node.value = this.vm[key]
+			console.log(node.value)
+			// 订阅
+			new Observer(this.vm, key, (newVal) => {
+				// 因为是 input 这种, 所以用的 node.value
+				node.value = newVal
+			})
+			// 输入处理
+			node.oninput = (e) => {
+				// 一样会触发 get
+				this.vm[key] = e.target.value
+			}
+		}
+		isEventDirective(name) {
+			return name.indexOf('v-on') === 0
+		}
+		bindEvent(node, attr) {
+			var eventType = attr.name.substr(5)
+			var eventName = attr.value
+			node.addEventListener(eventType, this.vm.$methods[eventName])
+		}
+		compileText(node) {
 			let reg = /{{(.+?)}}/g
 			let match
 			while (match = reg.exec(node.nodeValue)) {
@@ -135,8 +194,8 @@
 				let key = match[1].trim()
 				node.nodeValue = node.nodeValue.replace(raw, this.vm[key])
 				// 每一个 {{ }} 都是观察者
-				new Observer(this.vm, key, function (val, oldVal) {
-					node.nodeValue = node.nodeValue.replace(oldVal, val)
+				new Observer(this.vm, key, function (newval, oldVal) {
+					node.nodeValue = node.nodeValue.replace(oldVal, newval)
 				})
 			}
 		}
@@ -151,10 +210,11 @@
 		init(options) {
 			this.$el = document.querySelector(options.el)
 			this.$data = options.data
-			this.methods = options.methods
+			this.$methods = options.methods
 			this.makeShortcut()
 		}
 		makeShortcut() {
+			// 隔山打牛!
 			for (let key in this.$data) {
 				Object.defineProperty(this, key, {
 					enumerable: true,
@@ -167,6 +227,10 @@
 					}
 				})
 			}
+			// 绑定 methods 里的 this, 因为只用到 data, 而 data 已经 shortcut 过了, 所以嘿嘿~
+			for (let key in this.$methods) {
+				this.$methods[key] = this.$methods[key].bind(this)
+			}
 		}
 	}
 
@@ -175,6 +239,11 @@
 		data: {
 			name: 'micheal',
 			age: 22
+		},
+		methods: {
+			sayHi() {
+				alert(`hi~ i am ${this.name}`)
+			}
 		}
 	})
 
