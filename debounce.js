@@ -8,7 +8,7 @@ function debounce(fn, interval, timeGap) {
     var now = +new Date();
     if (!prev) prev = now;
     // 一直在执行操作...然后超过最大时间间隙的话, 主动执行一遍
-    if (now - prev > timeGap) {
+    if ( ( now === prev ) || ( now - prev > timeGap ) ) {
       fn();
       prev = +new Date();
     } else {
